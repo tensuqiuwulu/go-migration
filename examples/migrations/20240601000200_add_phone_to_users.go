@@ -1,4 +1,4 @@
-package main
+package migrations
 
 import (
 	"gorm.io/gorm"
@@ -13,3 +13,7 @@ func (m *Migration20240601000200AddPhoneToUsers) Up(db *gorm.DB) error {
 func (m *Migration20240601000200AddPhoneToUsers) Down(db *gorm.DB) error {
 	return db.Exec(`ALTER TABLE users DROP COLUMN phone`).Error
 }
+
+// Export the migration struct for plugin system
+// This function name must match the struct name exactly
+var Migration20240601000200AddPhoneToUsers_Exported = &Migration20240601000200AddPhoneToUsers{}

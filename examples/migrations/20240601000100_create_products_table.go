@@ -1,4 +1,4 @@
-package main
+package migrations
 
 import (
 	"gorm.io/gorm"
@@ -21,3 +21,7 @@ func (m *Migration20240601000100CreateProductsTable) Up(db *gorm.DB) error {
 func (m *Migration20240601000100CreateProductsTable) Down(db *gorm.DB) error {
 	return db.Migrator().DropTable("products")
 }
+
+// Export the migration struct for plugin system
+// This function name must match the struct name exactly
+var Migration20240601000100CreateProductsTable_Exported = &Migration20240601000100CreateProductsTable{}

@@ -1,6 +1,6 @@
 package migration
 
-const migrationTemplate = `package migrations
+const migrationTemplate = `package main
 
 import (
 	"gorm.io/gorm"
@@ -17,4 +17,7 @@ func (m *{{.StructName}}) Down(db *gorm.DB) error {
 	// Implement your rollback here
 	return nil
 }
+
+// Ekspor struct migrasi untuk sistem plugin
+var {{.StructName}}_Exported = &{{.StructName}}{}
 `

@@ -2,9 +2,17 @@ package migration
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"plugin"
+	"reflect"
 	"sort"
+	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"gorm.io/gorm"
 )
@@ -54,10 +62,33 @@ func getDatabase() (*gorm.DB, error) {
 
 // loadMigrations loads all migrations from the migrations directory
 func loadMigrations() ([]Migration, error) {
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current working directory: %w", err)
+	}
+	log.Printf("Current working directory: %s", cwd)
+	
+	// Check if migrations directory exists
+	migrationsDir := "migrations"
+	migrationsPath := filepath.Join(cwd, migrationsDir)
+	
+	// Check if migrations directory exists
+	if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
+		log.Printf("Migrations directory not found at: %s", migrationsPath)
+		return nil, fmt.Errorf("migrations directory not found: %w", err)
+	}
+	
 	// Get all migration files
-	files, err := os.ReadDir("migrations")
+	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read migrations directory: %w", err)
+	}
+
+	// log files
+	log.Printf("Found %d files in migrations directory", len(files))
+	for i, file := range files {
+		log.Printf("Migration file %d: %s", i+1, file.Name())
 	}
 	
 	// Sort files by name to ensure migrations run in order
@@ -69,52 +100,120 @@ func loadMigrations() ([]Migration, error) {
 	}
 	sort.Strings(filenames)
 	
-	// This is a placeholder. In a real implementation, you would:
-	// 1. Compile the migrations directory into a plugin
-	// 2. Load the plugin
-	// 3. Look up each migration struct by name
-	// 4. Return the list of migrations
+	// Compile the migrations directory into a plugin
+	log.Printf("Compiling migrations directory into plugin...")
 	
-	// For demonstration purposes, we'll return an empty slice
-	return []Migration{}, fmt.Errorf("migration loading not fully implemented, please implement loadMigrations() function")
+	// Use absolute path for migrations directory and output file
+	pluginOutputPath := filepath.Join(cwd, "migrations.so")
 	
-	/* Example implementation (pseudo-code):
+	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", pluginOutputPath, migrationsPath)
 	
-	// Compile the migrations directory
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", "migrations.so", "./migrations")
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to compile migrations: %w", err)
+	// Capture command output for debugging
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	
+	log.Printf("Running command: go build -buildmode=plugin -o %s %s", pluginOutputPath, migrationsPath)
+	
+	if cmdErr := cmd.Run(); cmdErr != nil {
+		log.Printf("Error compiling migrations: %v", cmdErr)
+		return nil, fmt.Errorf("failed to compile migrations: %w", cmdErr)
 	}
 	
-	// Load the plugin
-	p, err := plugin.Open("migrations.so")
+	log.Printf("Successfully compiled migrations plugin at: %s", pluginOutputPath)
+	
+	// Load the plugin using absolute path
+	log.Printf("Loading plugin from: %s", pluginOutputPath)
+	p, err := plugin.Open(pluginOutputPath)
 	if err != nil {
+		log.Printf("Error loading plugin: %v", err)
 		return nil, fmt.Errorf("failed to load migrations plugin: %w", err)
 	}
 	
+	log.Printf("Successfully loaded migrations plugin")
+	
 	// Load each migration
+	log.Printf("Loading migrations from plugin...")
 	migrations := make([]Migration, 0, len(filenames))
-	for _, filename := range filenames {
+	
+	for i, filename := range filenames {
+		log.Printf("Processing migration file %d/%d: %s", i+1, len(filenames), filename)
+		
 		// Extract struct name from filename
-		structName := ... // Parse from filename
+		// Format: YYYYMMDDHHMMSS_migration_name.go
+		parts := strings.Split(strings.TrimSuffix(filename, ".go"), "_")
+		if len(parts) < 2 {
+			log.Printf("Skipping %s: doesn't follow naming convention", filename)
+			continue // Skip files that don't follow the naming convention
+		}
 		
-		// Look up symbol
-		sym, err := p.Lookup(structName)
+		// Construct the struct name: Migration<timestamp><CamelCaseName>
+		timestamp := parts[0]
+		nameParts := parts[1:]
+		
+		// Convert to camel case
+		var camelCaseName string
+		for _, part := range nameParts {
+			camelCaseName += cases.Title(language.Und).String(part)
+		}
+		
+		// The struct name in the migration file is already prefixed with "Migration"
+		structName := "Migration" + timestamp + camelCaseName
+		// The exported variable name has _Exported suffix
+		exportedVarName := structName + "_Exported"
+		log.Printf("Looking for exported variable: %s", exportedVarName)
+		
+		// Look up exported variable in the plugin
+		sym, err := p.Lookup(exportedVarName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to lookup migration %s: %w", structName, err)
+			log.Printf("Error looking up exported variable %s: %v", exportedVarName, err)
+			// Try the original struct name as fallback
+			sym, err = p.Lookup(structName)
+			if err != nil {
+				log.Printf("Error looking up migration %s: %v", structName, err)
+				return nil, fmt.Errorf("failed to lookup migration %s or %s: %w", exportedVarName, structName, err)
+			}
+			log.Printf("Found migration using original struct name: %s", structName)
+		} else {
+			log.Printf("Found migration using exported variable: %s", exportedVarName)
 		}
 		
-		// Convert to Migration interface
-		migration, ok := sym.(Migration)
-		if !ok {
-			return nil, fmt.Errorf("%s does not implement Migration interface", structName)
+		log.Printf("Found symbol for %s, checking if it implements Migration interface", structName)
+		
+		// Try to convert the symbol to a Migration interface
+		log.Printf("Symbol type: %T", sym)
+		
+		// First, check if it's a pointer to a struct that implements Migration
+		if migration, ok := sym.(Migration); ok {
+			log.Printf("Successfully loaded migration: %s (direct interface)", structName)
+			migrations = append(migrations, migration)
+			continue
 		}
 		
-		migrations = append(migrations, migration)
+		// Next, check if it's a pointer to a struct that we need to dereference
+		// This is a more generic approach that doesn't rely on knowing the exact struct type
+		valueOfSym := reflect.ValueOf(sym)
+		log.Printf("Symbol value kind: %v, can interface? %v", valueOfSym.Kind(), valueOfSym.CanInterface())
+		
+		if valueOfSym.Kind() == reflect.Ptr && valueOfSym.Elem().CanInterface() {
+			// Try to get the concrete value and check if it implements Migration
+			concrete := valueOfSym.Elem().Interface()
+			log.Printf("Concrete type: %T", concrete)
+			
+			if migration, ok := concrete.(Migration); ok {
+				log.Printf("Successfully loaded migration: %s (via reflection)", structName)
+				migrations = append(migrations, migration)
+				continue
+			}
+		}
+		
+		// If we get here, we couldn't convert the symbol to a Migration
+		log.Printf("%s does not implement Migration interface", structName)
+		return nil, fmt.Errorf("%s does not implement Migration interface", structName)
 	}
 	
+	log.Printf("Successfully loaded %d migrations", len(migrations))
+	
 	return migrations, nil
-	*/
 }
 
 func ExecuteCommand(args []string) {

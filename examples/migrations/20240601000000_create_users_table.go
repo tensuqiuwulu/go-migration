@@ -1,4 +1,4 @@
-package main
+package migrations
 
 import (
 	"gorm.io/gorm"
@@ -22,3 +22,7 @@ func (m *Migration20240601000000CreateUsersTable) Up(db *gorm.DB) error {
 func (m *Migration20240601000000CreateUsersTable) Down(db *gorm.DB) error {
 	return db.Exec(`DROP TABLE IF EXISTS users`).Error
 }
+
+// Export the migration struct for plugin system
+// This function name must match the struct name exactly
+var Migration20240601000000CreateUsersTable_Exported = &Migration20240601000000CreateUsersTable{}

@@ -111,7 +111,7 @@ Perintah ini akan melakukan rollback migrasi dari batch terakhir.
 ### Contoh 1: Membuat Tabel dengan SQL
 
 ```go
-package main
+package main  // Harus menggunakan package main untuk plugin
 
 import (
 	"gorm.io/gorm"
@@ -135,12 +135,15 @@ func (m *Migration20240601000000CreateUsersTable) Up(db *gorm.DB) error {
 func (m *Migration20240601000000CreateUsersTable) Down(db *gorm.DB) error {
 	return db.Exec(`DROP TABLE IF EXISTS users`).Error
 }
+
+// Ekspor struct migrasi untuk sistem plugin
+var Migration20240601000000CreateUsersTable_Exported = &Migration20240601000000CreateUsersTable{}
 ```
 
 ### Contoh 2: Menggunakan GORM Model
 
 ```go
-package main
+package main  // Harus menggunakan package main untuk plugin
 
 import (
 	"gorm.io/gorm"
@@ -163,12 +166,15 @@ func (m *Migration20240601000100CreateProductsTable) Up(db *gorm.DB) error {
 func (m *Migration20240601000100CreateProductsTable) Down(db *gorm.DB) error {
 	return db.Migrator().DropTable("products")
 }
+
+// Ekspor struct migrasi untuk sistem plugin
+var Migration20240601000100CreateProductsTable_Exported = &Migration20240601000100CreateProductsTable{}
 ```
 
 ### Contoh 3: Menambahkan Kolom ke Tabel yang Sudah Ada
 
 ```go
-package main
+package main  // Harus menggunakan package main untuk plugin
 
 import (
 	"gorm.io/gorm"
@@ -183,6 +189,9 @@ func (m *Migration20240601000200AddPhoneToUsers) Up(db *gorm.DB) error {
 func (m *Migration20240601000200AddPhoneToUsers) Down(db *gorm.DB) error {
 	return db.Exec(`ALTER TABLE users DROP COLUMN phone`).Error
 }
+
+// Ekspor struct migrasi untuk sistem plugin
+var Migration20240601000200AddPhoneToUsers_Exported = &Migration20240601000200AddPhoneToUsers{}
 ```
 
 ## Integrasi dengan Aplikasi
@@ -222,6 +231,39 @@ func main() {
 2. File migrasi harus mengikuti format yang ditentukan dengan interface `Migration`.
 3. Nama struct migrasi harus unik untuk menghindari konflik.
 4. Migrasi dijalankan berdasarkan urutan timestamp pada nama file.
+5. **Penting**: Semua file migrasi harus menggunakan `package main` saat dikompilasi sebagai plugin. Ini diperlukan karena Go hanya mendukung plugin dari package main.
+   ```go
+   package main  // Harus menggunakan package main untuk plugin
+   
+   import (
+       "gorm.io/gorm"
+   )
+   ```
+6. **Penting**: Setiap file migrasi harus mengekspor struct migrasi sebagai variabel dengan akhiran `_Exported`, contoh:
+   ```go
+   // Definisi struct migrasi
+   type Migration20240601000000CreateUsersTable struct {}
+   
+   // Implementasi interface Migration
+   func (m *Migration20240601000000CreateUsersTable) Up(db *gorm.DB) error {
+       // Implementasi Up
+   }
+   
+   func (m *Migration20240601000000CreateUsersTable) Down(db *gorm.DB) error {
+       // Implementasi Down
+   }
+   
+   // Ekspor struct migrasi untuk sistem plugin
+   var Migration20240601000000CreateUsersTable_Exported = &Migration20240601000000CreateUsersTable{}
+   ```
+7. **Penting**: Saat mengimplementasikan migrasi di aplikasi Anda, pastikan untuk mengimpor package `plugin` dengan cara berikut:
+   ```go
+   import (
+       // Import lainnya
+       _ "plugin"
+   )
+   ```
+   Import ini diperlukan agar aplikasi dapat memuat file migrasi yang dikompilasi sebagai plugin.
 
 ## Lisensi
 

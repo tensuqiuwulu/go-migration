@@ -8,6 +8,9 @@ import (
 	// Uncomment baris berikut untuk menggunakan koneksi database langsung
 	// "gorm.io/driver/mysql"
 	// "gorm.io/gorm"
+	
+	// Plugin package diperlukan untuk loadMigrations
+	_ "plugin"
 )
 
 func main() {
@@ -26,6 +29,12 @@ func main() {
 		}
 		migration.SetDatabaseConnection(db)
 		*/
+		
+		// CATATAN PENTING:
+		// Implementasi loadMigrations() menggunakan plugin Go untuk memuat migrasi secara dinamis.
+		// Pastikan semua file migrasi di direktori migrations/ menggunakan package "migrations".
+		// Struktur migrasi harus mengikuti format: Migration<timestamp><CamelCaseName>
+		// Contoh: Migration20240601000000CreateUsersTable
 		
 		// Jalankan perintah migration
 		migration.ExecuteCommand(os.Args[1:])
