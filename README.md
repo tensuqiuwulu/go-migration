@@ -19,7 +19,9 @@ go get github.com/tensuqiuwulu/go-migration
 
 ### 1. Konfigurasi Database
 
-Sebelum menggunakan package ini, Anda perlu mengatur konfigurasi database:
+Ada dua cara untuk mengatur koneksi database:
+
+#### Cara 1: Menggunakan SetDatabaseConfig
 
 ```go
 import "github.com/tensuqiuwulu/go-migration/migration"
@@ -27,6 +29,30 @@ import "github.com/tensuqiuwulu/go-migration/migration"
 func main() {
     // Konfigurasi koneksi database
     migration.SetDatabaseConfig("mysql", "user:password@tcp(localhost:3306)/database?charset=utf8mb4&parseTime=True&loc=Local")
+    
+    // ...
+}
+```
+
+#### Cara 2: Menginjeksi Koneksi Database yang Sudah Ada
+
+```go
+import (
+    "github.com/tensuqiuwulu/go-migration/migration"
+    "gorm.io/driver/mysql"
+    "gorm.io/gorm"
+)
+
+func main() {
+    // Membuat koneksi database di aplikasi client
+    dsn := "user:password@tcp(localhost:3306)/database?charset=utf8mb4&parseTime=True&loc=Local"
+    db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+    if err != nil {
+        panic("failed to connect to database")
+    }
+    
+    // Menginjeksi koneksi database ke go-migration
+    migration.SetDatabaseConnection(db)
     
     // ...
 }

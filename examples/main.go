@@ -5,13 +5,27 @@ import (
 	"os"
 
 	"github.com/tensuqiuwulu/go-migration/migration"
+	// Uncomment baris berikut untuk menggunakan koneksi database langsung
+	// "gorm.io/driver/mysql"
+	// "gorm.io/gorm"
 )
 
 func main() {
 	// Cek apakah ada argumen untuk migration
 	if len(os.Args) > 1 && (os.Args[1] == "make:migration" || os.Args[1] == "migrate" || os.Args[1] == "migrate:rollback") {
-		// Konfigurasi database
+		// Cara 1: Menggunakan SetDatabaseConfig
 		migration.SetDatabaseConfig("mysql", "root:password@tcp(localhost:3306)/example_db?charset=utf8mb4&parseTime=True&loc=Local")
+		
+		// Cara 2: Menginjeksi koneksi database yang sudah ada
+		// Uncomment kode berikut untuk menggunakan cara 2
+		/*
+		dsn := "root:password@tcp(localhost:3306)/example_db?charset=utf8mb4&parseTime=True&loc=Local"
+		db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			panic("failed to connect to database")
+		}
+		migration.SetDatabaseConnection(db)
+		*/
 		
 		// Jalankan perintah migration
 		migration.ExecuteCommand(os.Args[1:])

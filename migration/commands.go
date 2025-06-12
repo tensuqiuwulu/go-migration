@@ -13,6 +13,7 @@ import (
 var (
 	dbDialect string = "mysql"
 	dbDSN     string = "user:password@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
+	dbConnection *gorm.DB = nil
 )
 
 // SetDatabaseConfig sets the database configuration
@@ -21,17 +22,34 @@ func SetDatabaseConfig(dialect, dsn string) {
 	dbDSN = dsn
 }
 
+// SetDatabaseConnection sets an existing database connection
+func SetDatabaseConnection(db *gorm.DB) {
+	dbConnection = db
+}
+
 // getDatabase returns a database connection
 func getDatabase() (*gorm.DB, error) {
-	// This is a placeholder. In a real implementation, you would use GORM to connect to the database
-	// For example: return gorm.Open(mysql.Open(dbDSN), &gorm.Config{})
-	// For now, we'll return nil to avoid adding dependencies
+	// If a database connection has been injected, use it
+	if dbConnection != nil {
+		return dbConnection, nil
+	}
 	
-	// You would need to import the appropriate database driver, e.g.:
+	// Otherwise, this is a placeholder. In a real implementation, you would use GORM to connect to the database
+	// For example:
 	// import "gorm.io/driver/mysql"
-	// or "gorm.io/driver/postgres", etc.
+	// return gorm.Open(mysql.Open(dbDSN), &gorm.Config{})
+	//
+	// Or for PostgreSQL:
+	// import "gorm.io/driver/postgres"
+	// return gorm.Open(postgres.Open(dbDSN), &gorm.Config{})
 	
-	return nil, fmt.Errorf("database connection not implemented, please implement getDatabase() function")
+	// For now, we'll return an error to remind users to either:
+	// 1. Implement this function with the appropriate database driver
+	// 2. Inject a database connection using SetDatabaseConnection
+	
+	return nil, fmt.Errorf("database connection not implemented, please either:\n" +
+		"1. Implement getDatabase() function with your database driver\n" +
+		"2. Inject a database connection using SetDatabaseConnection")
 }
 
 // loadMigrations loads all migrations from the migrations directory

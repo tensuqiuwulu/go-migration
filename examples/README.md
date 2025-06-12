@@ -18,8 +18,9 @@ Direktori ini berisi contoh penggunaan package Go-Migration.
 
 1. Pastikan Anda memiliki database MySQL yang berjalan
 2. Sesuaikan konfigurasi database di `main.go`
+   - Anda dapat menggunakan `SetDatabaseConfig` (cara 1, sudah aktif secara default)
+   - Atau menggunakan `SetDatabaseConnection` (cara 2, perlu uncomment kode di `main.go`)
 3. Jalankan perintah berikut:
-
 ### Membuat Migrasi Baru
 
 ```bash
