@@ -78,9 +78,7 @@ func camelCase(s string) string {
 	// Implementasi konversi ke CamelCase
 	words := strings.Fields(strings.ReplaceAll(s, "_", " "))
 	for i := range words {
-		if i > 0 {
-			words[i] = cases.Title(language.Und).String(words[i])
-		}
+		words[i] = cases.Title(language.Und).String(words[i])
 	}
 	return strings.Join(words, "")
 }
