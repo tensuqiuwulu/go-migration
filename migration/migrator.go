@@ -8,6 +8,8 @@ import (
 	"text/template"
 	"time"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
 
@@ -77,7 +79,7 @@ func camelCase(s string) string {
 	words := strings.Fields(strings.ReplaceAll(s, "_", " "))
 	for i := range words {
 		if i > 0 {
-			words[i] = strings.Title(words[i])
+			words[i] = cases.Title(language.Und).String(words[i])
 		}
 	}
 	return strings.Join(words, "")
