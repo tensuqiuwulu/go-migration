@@ -74,7 +74,7 @@ func loadMigrations() ([]Migration, error) {
 	migrationsPath := filepath.Join(cwd, migrationsDir)
 	
 	// Check if migrations directory exists
-	if _, err := os.Stat(migrationsPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(migrationsPath); os.IsNotExist(statErr) {
 		log.Printf("Migrations directory not found at: %s", migrationsPath)
 		return nil, fmt.Errorf("migrations directory not found: %w", err)
 	}
