@@ -1,6 +1,6 @@
 package migration
 
-const migrationTemplate = `package main
+const migrationTemplate = `package migrations
 
 import (
 	"gorm.io/gorm"
